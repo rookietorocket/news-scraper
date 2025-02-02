@@ -1,23 +1,29 @@
+import os
 import requests
 import json
 import logging
 from bs4 import BeautifulSoup
 
-# Telegram Bot Credentials
-TELEGRAM_BOT_TOKEN = "7606343976:AAH-anZwE4xZ9c9tbSmFV2mk82HbcRmR6zU"
-TELEGRAM_CHAT_ID = "5164949220"
+# 🔐 Secure Telegram Bot Credentials (From GitHub Secrets)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Headers to mimic a real browser request
+if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    print("❌ Missing Telegram credentials! Check GitHub Secrets.")
+    exit(1)
+
+# 📌 Headers to mimic a real browser request
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Accept-Language": "ne-NP,ne;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
-# Configure logging
+# 🔧 Configure logging (Save logs in the runner environment)
+LOG_FILE = "scraper_error.log"
 logging.basicConfig(
-    filename="/Users/sudip/VsCode/Python/scraper_error.log",
+    filename=LOG_FILE,
     level=logging.DEBUG,
-    format="%(astime)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
@@ -31,7 +37,7 @@ def scrape_kathmandupost():
     """Scrapes up to 10 latest news from Kathmandu Post with summaries"""
     url = "https://kathmandupost.com/"
     base_url = "https://kathmandupost.com"
-    
+
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
@@ -41,16 +47,14 @@ def scrape_kathmandupost():
         soup = BeautifulSoup(response.text, "html.parser")
         news_items = set()
 
-        for article in soup.find_all("article", class_="article-image")[:10]:  
+        for article in soup.find_all("article", class_="article-image")[:10]:
             headline_tag = article.find("h3")
             link_tag = headline_tag.find("a") if headline_tag else None
             summary = extract_summary(article)
 
             if link_tag and "href" in link_tag.attrs:
                 title = link_tag.get_text(strip=True)
-                link = link_tag["href"]
-                if link.startswith("/"):
-                    link = base_url + link
+                link = base_url + link_tag["href"] if link_tag["href"].startswith("/") else link_tag["href"]
                 news_items.add((title, link, summary))
 
         return [{"Source": "Kathmandu Post", "Headline": title, "Link": link, "Summary": summary} for title, link, summary in news_items]
@@ -63,7 +67,7 @@ def scrape_kathmandupost():
 def scrape_onlinekhabar():
     """Scrapes up to 10 latest news from OnlineKhabar with summaries"""
     url = "https://english.onlinekhabar.com/"
-    
+
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         if response.status_code != 200:
@@ -73,7 +77,7 @@ def scrape_onlinekhabar():
         soup = BeautifulSoup(response.text, "html.parser")
         news_items = set()
 
-        for article in soup.find_all("div", class_="ok-post-contents")[:10]:  
+        for article in soup.find_all("div", class_="ok-post-contents")[:10]:
             headline_tag = article.find("h2")
             link_tag = headline_tag.find("a") if headline_tag else None
             summary = extract_summary(article)
@@ -104,20 +108,20 @@ def scrape_myrepublica():
         soup = BeautifulSoup(response.text, "html.parser")
         news_items = set()
 
-        articles = soup.find_all("div", class_="cat_list")[:10]  
+        articles = soup.find_all("div", class_="cat_list")[:10]
 
         if not articles:
             logging.warning("No news articles found on MyRepublica.")
             return []
 
-        for article in articles:  
+        for article in articles:
             headline_tag = article.find("h3")
             link_tag = headline_tag.find("a") if headline_tag else None
             summary = extract_summary(article)
 
             if link_tag and "href" in link_tag.attrs:
                 title = link_tag.get_text(strip=True)
-                link = base_url + link if link_tag["href"].startswith("/") else link_tag["href"]
+                link = base_url + link_tag["href"] if link_tag["href"].startswith("/") else link_tag["href"]
                 news_items.add((title, link, summary))
 
         return [{"Source": "MyRepublica", "Headline": title, "Link": link, "Summary": summary} for title, link, summary in news_items]
@@ -131,7 +135,7 @@ def send_telegram_message(news_list):
     """Sends new news articles with summaries to Telegram"""
     if not news_list:
         return
-    
+
     message = "📰 **Nepali News Update**\n\n"
     for news in news_list:
         message += f"🔹 *{news['Source']}*\n{news['Headline']}\n{news['Summary']}\n🔗 {news['Link']}\n\n"
@@ -147,7 +151,7 @@ def load_past_news():
     try:
         with open("past_news.json", "r", encoding="utf-8") as file:
             past_news_list = json.load(file)
-            return {tuple(item) for item in past_news_list}  
+            return {tuple(item) for item in past_news_list}
     except (FileNotFoundError, json.JSONDecodeError):
         return set()
 
@@ -155,10 +159,10 @@ def load_past_news():
 def save_past_news(news_set):
     """Saves new news articles to avoid duplicates"""
     with open("past_news.json", "w", encoding="utf-8") as file:
-        json.dump([list(item) for item in news_set], file, indent=4, ensure_ascii=False)  
+        json.dump([list(item) for item in news_set], file, indent=4, ensure_ascii=False)
 
 
-# Scrape news from all sources
+# 🔥 Scrape news from all sources
 news_sources = {
     "Kathmandu Post": scrape_kathmandupost(),
     "OnlineKhabar": scrape_onlinekhabar(),
@@ -170,11 +174,11 @@ past_news = load_past_news()
 unique_news = set()
 new_news_list = []
 
-# Limit total articles to 30
+# 📌 Ensure maximum of 30 articles total
 for source, articles in news_sources.items():
     for article in articles:
         news_tuple = (article["Headline"], article["Link"], article["Summary"])
-        if news_tuple not in past_news and len(new_news_list) < 30:  
+        if news_tuple not in past_news and len(new_news_list) < 30:
             unique_news.add(news_tuple)
             new_news_list.append(article)
 
@@ -184,4 +188,3 @@ save_past_news(unique_news | past_news)
 # Send new news to Telegram
 send_telegram_message(new_news_list)
 print(f"✅ Sent {len(new_news_list)} new articles to Telegram.")
-
