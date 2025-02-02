@@ -1,7 +1,7 @@
 import requests
 import json
 import logging
-fzrom bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 
 # Telegram Bot Credentials
 TELEGRAM_BOT_TOKEN = "7606343976:AAH-anZwE4xZ9c9tbSmFV2mk82HbcRmR6zU"
