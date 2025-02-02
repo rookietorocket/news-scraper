@@ -2,7 +2,7 @@ name: Nepali News Scraper
 
 on:
   schedule:
-    - cron: "*/2 * * * *"  # Runs every 2 minutes
+    - cron: "0*/6 * * * *"  # Runs every 6 hours
 
   workflow_dispatch:  # Allows manual trigger
 
