@@ -4,7 +4,7 @@ import json
 import logging
 from bs4 import BeautifulSoup
 
-# 🔐 Secure Telegram Bot Credentials (From GitHub Secrets)
+# 🔐 Secure Telegram Credentials (Loaded from GitHub Secrets)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -18,7 +18,7 @@ HEADERS = {
     "Accept-Language": "ne-NP,ne;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
-# 🔧 Configure logging (Save logs in the runner environment)
+# 🔧 Configure logging (Saves logs in GitHub runner)
 LOG_FILE = "scraper_error.log"
 logging.basicConfig(
     filename=LOG_FILE,
