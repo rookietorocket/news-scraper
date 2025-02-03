@@ -2,7 +2,8 @@ name: Nepali News Scraper
 
 on:
   schedule:
-    - cron: "0 */5 * * *"  # Runs every 5 hours
+    - cron: "0*/6 * * * *"  # Runs every 6 hours
+
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
@@ -20,9 +21,4 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run news scraper
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python scrap.py
-
+      - name: Run new
