@@ -45,7 +45,7 @@ def scrape_kathmandupost():
             return []
 
         soup = BeautifulSoup(response.text, "html.parser")
-        news_items = set()
+        news_items = []
 
         for article in soup.find_all("article", class_="article-image")[:10]:
             headline_tag = article.find("h3")
@@ -55,9 +55,9 @@ def scrape_kathmandupost():
             if link_tag and "href" in link_tag.attrs:
                 title = link_tag.get_text(strip=True)
                 link = base_url + link_tag["href"] if link_tag["href"].startswith("/") else link_tag["href"]
-                news_items.add((title, link, summary))
+                news_items.append({"Source": "Kathmandu Post", "Headline": title, "Link": link, "Summary": summary})
 
-        return [{"Source": "Kathmandu Post", "Headline": title, "Link": link, "Summary": summary} for title, link, summary in news_items]
+        return news_items
 
     except requests.RequestException as e:
         logging.error(f"Error fetching Kathmandu Post: {str(e)}")
@@ -75,7 +75,7 @@ def scrape_onlinekhabar():
             return []
 
         soup = BeautifulSoup(response.text, "html.parser")
-        news_items = set()
+        news_items = []
 
         for article in soup.find_all("div", class_="ok-post-contents")[:10]:
             headline_tag = article.find("h2")
@@ -85,9 +85,9 @@ def scrape_onlinekhabar():
             if link_tag:
                 title = link_tag.get_text(strip=True)
                 link = link_tag["href"]
-                news_items.add((title, link, summary))
+                news_items.append({"Source": "OnlineKhabar", "Headline": title, "Link": link, "Summary": summary})
 
-        return [{"Source": "OnlineKhabar", "Headline": title, "Link": link, "Summary": summary} for title, link, summary in news_items]
+        return news_items
 
     except requests.RequestException as e:
         logging.error(f"Error fetching OnlineKhabar: {str(e)}")
@@ -106,29 +106,44 @@ def scrape_myrepublica():
             return []
 
         soup = BeautifulSoup(response.text, "html.parser")
-        news_items = set()
+        news_items = []
 
-        articles = soup.find_all("div", class_="cat_list")[:10]
+        articles = soup.find_all("a", class_="col-span-1 flex gap-1")[:10]
 
         if not articles:
             logging.warning("No news articles found on MyRepublica.")
             return []
 
         for article in articles:
-            headline_tag = article.find("h3")
-            link_tag = headline_tag.find("a") if headline_tag else None
+            headline_tag = article.find("h4")
+            link = article["href"]
             summary = extract_summary(article)
 
-            if link_tag and "href" in link_tag.attrs:
-                title = link_tag.get_text(strip=True)
-                link = base_url + link_tag["href"] if link_tag["href"].startswith("/") else link_tag["href"]
-                news_items.add((title, link, summary))
+            if headline_tag:
+                title = headline_tag.get_text(strip=True)
+                full_link = base_url + link if link.startswith("/") else link
+                news_items.append({"Source": "MyRepublica", "Headline": title, "Link": full_link, "Summary": summary})
 
-        return [{"Source": "MyRepublica", "Headline": title, "Link": link, "Summary": summary} for title, link, summary in news_items]
+        return news_items
 
     except requests.RequestException as e:
         logging.error(f"Error fetching MyRepublica: {str(e)}")
         return []
+
+
+def load_sent_news():
+    """Loads previously sent news to avoid duplicates"""
+    try:
+        with open("sent_news.json", "r", encoding="utf-8") as file:
+            return set(tuple(item) for item in json.load(file))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return set()
+
+
+def save_sent_news(news_set):
+    """Saves sent news to avoid resending duplicates"""
+    with open("sent_news.json", "w", encoding="utf-8") as file:
+        json.dump([list(item) for item in news_set], file, indent=4, ensure_ascii=False)
 
 
 def send_telegram_message(news_list):
@@ -146,22 +161,6 @@ def send_telegram_message(news_list):
     requests.post(url, json=payload)
 
 
-def load_past_news():
-    """Loads past news to avoid duplicates"""
-    try:
-        with open("past_news.json", "r", encoding="utf-8") as file:
-            past_news_list = json.load(file)
-            return {tuple(item) for item in past_news_list}
-    except (FileNotFoundError, json.JSONDecodeError):
-        return set()
-
-
-def save_past_news(news_set):
-    """Saves new news articles to avoid duplicates"""
-    with open("past_news.json", "w", encoding="utf-8") as file:
-        json.dump([list(item) for item in news_set], file, indent=4, ensure_ascii=False)
-
-
 # 🔥 Scrape news from all sources
 news_sources = {
     "Kathmandu Post": scrape_kathmandupost(),
@@ -169,22 +168,20 @@ news_sources = {
     "MyRepublica": scrape_myrepublica(),
 }
 
-# Load past news
-past_news = load_past_news()
-unique_news = set()
+# Load sent news
+sent_news = load_sent_news()
 new_news_list = []
 
-# 📌 Ensure maximum of 30 articles total
+# 📌 Get exactly 10 articles per newspaper, filter out previously sent articles
 for source, articles in news_sources.items():
     for article in articles:
         news_tuple = (article["Headline"], article["Link"], article["Summary"])
-        if news_tuple not in past_news and len(new_news_list) < 30:
-            unique_news.add(news_tuple)
+        if news_tuple not in sent_news:
             new_news_list.append(article)
 
-# Save updated past news
-save_past_news(unique_news | past_news)
+# Save updated sent news
+save_sent_news(set(tuple(news.values()) for news in new_news_list) | sent_news)
 
-# Send new news to Telegram
+# Send only new news to Telegram
 send_telegram_message(new_news_list)
 print(f"✅ Sent {len(new_news_list)} new articles to Telegram.")
