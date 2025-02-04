@@ -1,6 +1,6 @@
 # 📰 Nepali News Scraper
 
-An **automated web scraper** that collects the latest Nepali news from **Kathmandu Post, OnlineKhabar, and MyRepublica** every 6 hours and sends updates directly to **Telegram**.
+An **automated web scraper** that collects the latest Nepali news from **Kathmandu Post, OnlineKhabar, and MyRepublica** every 5 hours and sends updates directly to **Telegram**.
 
 ## 🚀 Features
 ✅ **Scrapes the latest news** (max 10 per site, max 30 per run)  
