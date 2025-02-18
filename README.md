@@ -15,5 +15,5 @@ An **automated web scraper** that collects the latest Nepali news from **Kathman
 
 ### **1️⃣ Clone the Repository**
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/news-scraper.git
+git clone https://github.com/rookietorocket/news-scraper.git
 cd news-scraper
