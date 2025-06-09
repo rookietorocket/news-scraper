@@ -175,12 +175,29 @@ new_news_list = []
 # 📌 Get exactly 10 articles per newspaper, filter out previously sent articles
 for source, articles in news_sources.items():
     for article in articles:
-        news_tuple = (article["Headline"], article["Link"], article["Summary"])
+        # Tuple order must match save_sent_news: Source, Headline, Link, Summary
+        news_tuple = (
+            article["Source"],
+            article["Headline"],
+            article["Link"],
+            article["Summary"],
+        )
         if news_tuple not in sent_news:
             new_news_list.append(article)
 
 # Save updated sent news
-save_sent_news(set(tuple(news.values()) for news in new_news_list) | sent_news)
+save_sent_news(
+    set(
+        (
+            news["Source"],
+            news["Headline"],
+            news["Link"],
+            news["Summary"],
+        )
+        for news in new_news_list
+    )
+    | sent_news
+)
 
 # Send only new news to Telegram
 send_telegram_message(new_news_list)
